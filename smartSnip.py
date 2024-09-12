@@ -1,5 +1,6 @@
 import tkinter as tk
 import customtkinter as ctk
+from tkinter import messagebox
 from PIL import ImageGrab, Image
 import io
 import base64
@@ -10,8 +11,6 @@ import pyaudio
 import soundfile as sf
 import dotenv
 import numpy as np
-
-
 
 class SnippingTool(ctk.CTk):
 
@@ -24,6 +23,11 @@ class SnippingTool(ctk.CTk):
         # Set and load config.env for environment variables
         dotenv_file = dotenv.find_dotenv(filename='config.env')
         dotenv.load_dotenv(dotenv_file)
+
+        # Ensure MAX_TOKENS is set with a default value if not present
+        if 'MAX_TOKENS' not in os.environ:
+            os.environ['MAX_TOKENS'] = '4000'
+            dotenv.set_key(dotenv_file, 'MAX_TOKENS', os.environ['MAX_TOKENS'])
 
         # Set the appearance mode and default color theme (from config.env)
         ctk.set_appearance_mode(os.environ['appearanceMode'])
@@ -48,14 +52,6 @@ class SnippingTool(ctk.CTk):
         # Create a flag to stop the audio stream
         self.streamStop = False
 
-
-
-
-
-
-
-
-
     def start_snipping(self):
         '''Start the snipping process'''
 
@@ -64,9 +60,6 @@ class SnippingTool(ctk.CTk):
 
         # Call create_overlay() to create the overlay
         self.create_overlay()
-
-
-
 
     def create_overlay(self):
         '''Create the overlay for the snipping process'''
@@ -83,8 +76,6 @@ class SnippingTool(ctk.CTk):
         self.canvas = tk.Canvas(self.overlay, cursor="cross", bg="black", highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
-
-
         # ----- Bind mouse events to snip functions -----
 
         # Left click to start snipping
@@ -98,10 +89,6 @@ class SnippingTool(ctk.CTk):
 
         # Click 'Escape' to cancel snipping
         self.overlay.bind('<Escape>', self.cancel_snipping)
-
-
-
-
 
     def on_canvas_click(self, event):
         '''Initialize the starting coordinates of the snip'''
@@ -118,10 +105,6 @@ class SnippingTool(ctk.CTk):
                                                       outline='white', width=2  # Set the outline color and width
                                                       )
 
-
-
-
-
     def on_canvas_drag(self, event):
         '''Update the coordinates of the snip and resize the rectangle as the mouse is dragged'''
 
@@ -137,8 +120,6 @@ class SnippingTool(ctk.CTk):
                            self.y2  # Update the bottom right y coordinate
                            )
 
-
-
     def on_canvas_release(self, event):
         '''End the snipping process when the mouse is released'''
 
@@ -151,10 +132,6 @@ class SnippingTool(ctk.CTk):
         # Call main_window() to create the main window
         self.main_window()
 
-
-
-
-
     def cancel_snipping(self, event=None):
         '''Cancel the snipping process'''
 
@@ -163,14 +140,6 @@ class SnippingTool(ctk.CTk):
 
         # Call deiconify() to show the main window again (un-withdraw it)
         self.deiconify()
-
-
-
-
-
-
-
-
 
     def take_screenshot(self):
         '''Take a screenshot of the snip using the current coordinates'''
@@ -182,19 +151,11 @@ class SnippingTool(ctk.CTk):
         # Take a screenshot of the selected snip area
         self.screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
 
-
-
-
-
-
-
-
     def main_window(self):
         '''Create the main window after the snipping process is complete'''
 
         # Update the window size
         self.geometry("400x500")
-
 
         # ----- Textbox default text handling -----
 
@@ -221,8 +182,6 @@ class SnippingTool(ctk.CTk):
             self.gpt_threading()
 
         # ------------------------------------------
-
-
 
         # Create a frame and the contained widgets, only if they don't already exist (to prevent duplicates)
         if not hasattr(self, 'output_frame'):
@@ -256,7 +215,6 @@ class SnippingTool(ctk.CTk):
             self.query_entry.bind("<FocusOut>", handle_focus_out)
             self.query_entry.bind("<Return>", handle_enter)
 
-
             # Create a frame to hold the response widgets
             self.response_frame = ctk.CTkFrame(self.output_frame)
             self.response_frame.pack(side=tk.TOP, fill=tk.BOTH, padx=15, pady=15, expand=True)
@@ -277,8 +235,6 @@ class SnippingTool(ctk.CTk):
             self.image_label = ctk.CTkLabel(self, text="")
             self.image_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-
-
         # Create a thumbnail of the screenshot
         self.create_thumbnail()
 
@@ -286,13 +242,8 @@ class SnippingTool(ctk.CTk):
         self.image_label.configure(image=self.thumbnail)
         self.image_label.image = self.thumbnail  # Keep reference to avoid garbage-collection
 
-
         # Call deiconify() to show the main window again (un-withdraw it)
         self.deiconify()
-
-
-
-
 
     def create_thumbnail(self):
         '''Create a thumbnail of the screenshot to display in the main window'''
@@ -306,16 +257,12 @@ class SnippingTool(ctk.CTk):
         screenshot_width, screenshot_height = thumbnail_image.size
         self.thumbnail = ctk.CTkImage(light_image=thumbnail_image, size=(screenshot_width, screenshot_height))
 
-
-
     def change_env_value(self, variable, newValue):
         '''Modify config.env to permanently change the value of a variable'''
         dotenv_file = dotenv.find_dotenv(filename='config.env')
         dotenv.load_dotenv(dotenv_file)
         os.environ[variable] = newValue
         dotenv.set_key(dotenv_file, variable, os.environ[variable])
-
-
 
     def settings_window(self):
         '''Open the settings window'''
@@ -327,7 +274,6 @@ class SnippingTool(ctk.CTk):
 
         def change_theme_event(new_theme: str):
             '''Modify config.env to permanently change the theme'''
-            #ctk.set_default_color_theme(themeDict[new_theme])
             self.change_env_value('colorTheme', themeDict[new_theme])
 
         def save_API_key(new_API: str):
@@ -342,6 +288,17 @@ class SnippingTool(ctk.CTk):
             '''Modify config.env to permanently change the TTS model'''
             self.change_env_value('TTSModel', new_tts_model)
 
+        def save_max_tokens(new_max_tokens: str):
+            '''Modify config.env to permanently change the max tokens'''
+            try:
+                int_value = int(new_max_tokens)
+                if 1 <= int_value <= 4096:
+                    self.change_env_value('MAX_TOKENS', new_max_tokens)
+                else:
+                    raise ValueError("Value must be between 1 and 4096")
+            except ValueError:
+                # Show an error message to the user
+                messagebox.showerror("Invalid Input", "Please enter a valid number between 1 and 4096.")
 
         # Create a dictionary to hold theme translations
         themeDict = {
@@ -359,7 +316,6 @@ class SnippingTool(ctk.CTk):
             'rose': 'themes/rose.json'
         }
 
-
         # Withdraw the main window to hide it
         self.withdraw()
 
@@ -367,7 +323,7 @@ class SnippingTool(ctk.CTk):
         self.settings = ctk.CTkToplevel(self)
         self.settings.attributes("-topmost", True)
         self.settings.title("Settings")
-        self.settings.geometry("300x390")
+        self.settings.geometry("300x450")  # Increased height to accommodate new max_tokens setting
 
         # Set the icon for the settings window (Must set a delay due to customtkinter bug with CTkToplevel)
         self.settings.after(190, lambda: self.settings.iconbitmap(os.environ['icon']))
@@ -375,11 +331,9 @@ class SnippingTool(ctk.CTk):
         # Ensure the settings window appears on top and receives immediate focus
         self.settings.focus_force()
 
-
         # Create a frame that will hold all settings
         self.settings.settings_frame = ctk.CTkFrame(self.settings)
         self.settings.settings_frame.pack(fill=tk.BOTH, padx=5, pady=5)
-
 
         # Create API key label, entry, and save button within its own frame
         self.settings.API_key_label = ctk.CTkLabel(self.settings.settings_frame, text="\nOpenAI API Key")
@@ -396,7 +350,6 @@ class SnippingTool(ctk.CTk):
                                                    command=lambda: save_API_key(self.settings.API_key_entry.get()))
         self.settings.API_key_save.pack(side=tk.RIGHT, padx=5, pady=5)
 
-
         # Create drop-down to choose appearance mode
         self.settings.appearance_mode_label = ctk.CTkLabel(self.settings.settings_frame, text="\nAppearance Mode")
         self.settings.appearance_mode_label.pack(padx=5, pady=2)
@@ -405,7 +358,6 @@ class SnippingTool(ctk.CTk):
                                                                      command=change_appearance_mode_event)
         self.settings.appearance_mode_optionmenu.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
         self.settings.appearance_mode_optionmenu.set(os.environ['appearanceMode'])
-
 
         # Create drop-down to choose theme
         self.settings.theme_label = ctk.CTkLabel(self.settings.settings_frame, text="\nTheme (requires restart)")
@@ -416,7 +368,6 @@ class SnippingTool(ctk.CTk):
         self.settings.theme_optionmenu.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
         self.settings.theme_optionmenu.set(list(filter(lambda x: themeDict[x] == os.environ['colorTheme'], themeDict))[0])
 
-
         # Create drop-down to choose TTS voice
         self.settings.TTS_voice_label = ctk.CTkLabel(self.settings.settings_frame, text="\nTTS Voice")
         self.settings.TTS_voice_label.pack(padx=5, pady=2)
@@ -425,7 +376,6 @@ class SnippingTool(ctk.CTk):
                                                                      command=change_TTS_voice_event)
         self.settings.TTS_voice_optionmenu.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
         self.settings.TTS_voice_optionmenu.set(os.environ['TTSVoice'])
-
 
         # Create drop-down to choose TTS Model
         self.settings.TTS_model_label = ctk.CTkLabel(self.settings.settings_frame, text="\nTTS Model")
@@ -436,12 +386,23 @@ class SnippingTool(ctk.CTk):
         self.settings.TTS_model_optionmenu.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
         self.settings.TTS_model_optionmenu.set(os.environ['TTSModel'])
 
+        # Create max tokens label, entry, and save button within its own frame
+        self.settings.max_tokens_label = ctk.CTkLabel(self.settings.settings_frame, text="\nMax Tokens (1-4096)")
+        self.settings.max_tokens_label.pack(padx=5, pady=2)
 
+        self.settings.settings_frame.max_tokens_frame = ctk.CTkFrame(self.settings.settings_frame)
+        self.settings.settings_frame.max_tokens_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        self.settings.max_tokens_entry = ctk.CTkEntry(self.settings.settings_frame.max_tokens_frame)
+        self.settings.max_tokens_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5, pady=5)
+        self.settings.max_tokens_entry.insert(0, os.environ.get('MAX_TOKENS', '4000'))
+
+        self.settings.max_tokens_save = ctk.CTkButton(self.settings.settings_frame.max_tokens_frame, text="Save", width=10,
+                                                      command=lambda: save_max_tokens(self.settings.max_tokens_entry.get()))
+        self.settings.max_tokens_save.pack(side=tk.RIGHT, padx=5, pady=5)
 
         # Bind the settings window destroy event to a method
         self.settings.protocol("WM_DELETE_WINDOW", self.on_settings_close)
-
-
 
     def on_settings_close(self):
         '''Close the settings window and show the main window'''
@@ -452,18 +413,15 @@ class SnippingTool(ctk.CTk):
         # Destroy the settings window
         self.settings.destroy()
 
-
-
-
     def reset_app(self):
         '''Reset the app to its initial state (minimize)'''
 
         # Destroy the overlay if it exists
-        if self.overlay:
+        if hasattr(self, 'overlay'):
             self.overlay.destroy()
 
         # Destroy the image label if it exists
-        if self.image_label:
+        if hasattr(self, 'image_label'):
             self.image_label.destroy()
 
         # Destroy the output frame and its widgets if they exist
@@ -482,7 +440,6 @@ class SnippingTool(ctk.CTk):
         # Revert window to the initial size and bring it back to focus
         self.geometry("300x100")
         self.deiconify()
-
 
     def button_states(self, buttonName, state):
         '''Change the button state ('normal' <=> 'disabled'), for buttons that have a bug.'''
@@ -507,16 +464,11 @@ class SnippingTool(ctk.CTk):
         else:
             print("Incorrect button name provided.")
 
-
-
-
     def gpt_threading(self):
         '''Create a thread to send the image to send_to_gpt4()'''
 
         GPT = Thread(target=self.send_to_gpt4)
         GPT.start()
-
-
 
     def send_to_gpt4(self):
         '''Send the image and prompt to GPT-4V API'''
@@ -533,18 +485,16 @@ class SnippingTool(ctk.CTk):
         # Delete and re-create the generate_TTS_button to disable it (re-creation is required until I find a better solution that doesn't result in bugs when the button is disabled)
         self.button_states('generate_TTS_button', 'disabled')
 
-
         self.display_response("processing...")
 
-        # Convert the image to a  base64 string
-        img_byte_arr = io.BytesIO()                                    # Create a byte array in memory
-        self.screenshot.save(img_byte_arr, format='JPEG')              # Use 'JPEG' format for base64 encoding
-        img_byte_arr = img_byte_arr.getvalue()                         # Save the byte array as a value
-        base64_image = base64.b64encode(img_byte_arr).decode('utf-8')  # Convert image to base64
+        # Convert the image to a base64 string
+        img_byte_arr = io.BytesIO()
+        self.screenshot.save(img_byte_arr, format='JPEG')
+        img_byte_arr = img_byte_arr.getvalue()
+        base64_image = base64.b64encode(img_byte_arr).decode('utf-8')
 
         # Get the user input text
         user_input_text = self.query_entry.get()
-
 
         # Create the headers for the request
         headers = {
@@ -572,7 +522,7 @@ class SnippingTool(ctk.CTk):
                     ]
                 }
             ],
-            "max_tokens": 4000
+            "max_tokens": int(os.environ.get('MAX_TOKENS', '4000'))  # Use the value from config, default to 4000
         }
 
         # Send the request to the GPT-4V API
@@ -580,7 +530,6 @@ class SnippingTool(ctk.CTk):
 
         # Check if the request was successful
         if response.status_code == 200:
-
             # Get the response text from the JSON response
             result = response.json().get('choices', [])[0].get('message', {}).get('content', '')
 
@@ -599,7 +548,6 @@ class SnippingTool(ctk.CTk):
 
         # If the request was unsuccessful
         else:
-
             # After getting the response re-enable the "Send to GPT-4" button
             self.send_to_gpt4_button.configure(state=ctk.NORMAL)
 
@@ -612,16 +560,11 @@ class SnippingTool(ctk.CTk):
             # Display the response in the textbox
             self.display_response("Error: "+ str(response.status_code) + response.text)
 
-
-
-
     def tts_threading(self):
         '''Create a thread to send the response to streamed_audio()'''
 
         TTS = Thread(target=self.streamed_audio, args=(self.textbox.get(1.0, tk.END),))
         TTS.start()
-
-
 
     def streamed_audio(self, input_text):
         '''Send the response to OpenAI's TTS API and stream the audio'''
@@ -632,12 +575,9 @@ class SnippingTool(ctk.CTk):
             self.generate_TTS_button = ctk.CTkButton(self.button_frame, fg_color='red', hover_color='darkred', text="TTS", width=10, state=ctk.NORMAL, command=self.cancelAudio)
             self.generate_TTS_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-
-
         # Change the button color to red, and change the command to cancelAudio() (Save the original colors)
         fgcolor = self.generate_TTS_button.cget("fg_color")
         hovercolor = self.generate_TTS_button.cget("hover_color")
-
 
         # Delete and re-create the generate_TTS_button to modify it (re-creation is required until I find a better solution that doesn't result in bugs when the button is modified)
         if hasattr(self, 'generate_TTS_button'):
@@ -645,14 +585,12 @@ class SnippingTool(ctk.CTk):
             self.after(25, self.generate_TTS_button.destroy)
             self.after(25, create_delayed_button)
 
-
         # Disable all other buttons until the audio stream ends, or is canceled
         self.send_to_gpt4_button.configure(state=ctk.DISABLED)
         self.snip_button.configure(state=ctk.DISABLED)
 
         # Use button_states to disable the button, preventing bug
         self.button_states('reset_button', 'disabled')
-
 
         # OpenAI API endpoint and parameters
         url = "https://api.openai.com/v1/audio/speech"
@@ -666,7 +604,6 @@ class SnippingTool(ctk.CTk):
             "response_format": "opus",
         }
 
-
         audio = pyaudio.PyAudio()
 
         # Get the audio format from the OpenAI response
@@ -674,7 +611,6 @@ class SnippingTool(ctk.CTk):
             if subtype == 'PCM_16':
                 return pyaudio.paInt16
             return pyaudio.paInt16
-
 
         with requests.post(url, headers=headers, json=payload, stream=True) as response:
 
@@ -688,7 +624,7 @@ class SnippingTool(ctk.CTk):
                 buffer.seek(0)
 
                 # Create a sound file from the response
-                with sf.SoundFile(buffer, 'r') as sound_file:
+                with sf.SoundFile(buffer, 'r') as sound_file: 
 
                     format = get_pyaudio_format(sound_file.subtype)
                     channels = sound_file.channels
@@ -715,7 +651,6 @@ class SnippingTool(ctk.CTk):
 
             # If the request was unsuccessful
             else:
-                #print(f"Error: {response.status_code} - {response.text}")
                 pass
 
             # Close the audio object
@@ -735,15 +670,10 @@ class SnippingTool(ctk.CTk):
             # Use button_states to enable the button, preventing bug
             self.button_states('reset_button', 'normal')
 
-
-
     def cancelAudio(self):
         '''Cancel the audio stream (change the streamStop flag to True)'''
 
         self.streamStop = True
-
-
-
 
     def display_response(self, response_text):
         '''Display the response in the textbox'''
@@ -752,7 +682,6 @@ class SnippingTool(ctk.CTk):
         self.textbox.delete("1.0", tk.END)         # Clear current text
         self.textbox.insert("1.0", response_text)   # Insert the response text
         self.textbox.configure(state="disabled")         # Disable the textbox to make it read-only
-
 
 if __name__ == "__main__":
     app = SnippingTool()
